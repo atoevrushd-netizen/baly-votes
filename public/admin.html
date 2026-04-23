@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Балы — Управление</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #09090f;
+      --surface: #111120;
+      --surface2:#18182b;
+      --border:  #22223a;
+      --purple:  #7c3aed;
+      --purple-h:#6d28d9;
+      --gold:    #f59e0b;
+      --red:     #ef4444;
+      --red-h:   #dc2626;
+      --green:   #22c55e;
+      --text:    #f0f0fa;
+      --muted:   #5a5a82;
+      --muted2:  #7878a8;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+    }
+    .logo em { color: var(--purple); font-style: normal; }
+    .logo-sub { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
+
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .btn-stop {
+      background: rgba(239,68,68,0.12);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+    .btn-stop:hover { background: rgba(239,68,68,0.22); border-color: var(--red); }
+
+    .btn-reset {
+      background: rgba(255,255,255,0.05);
+      color: var(--muted2);
+      border: 1px solid var(--border);
+    }
+    .btn-reset:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Connection status */
+    .conn-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 7px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .conn-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .conn-dot.live { background: var(--green); box-shadow: 0 0 5px var(--green); }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Participants panel (left) ─────────────────────────────────────── */
+    .panel-main {
+      padding: 28px 32px;
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 14px; opacity: 0.4; }
+    .empty-text { font-size: 0.9rem; line-height: 1.6; }
+    .empty-text strong { color: var(--muted2); display: block; margin-bottom: 6px; }
+
+    /* Participant card */
+    .p-card {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
+      gap: 14px;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .p-card.current {
+      border-color: var(--purple);
+      background: rgba(124,58,237,0.07);
+    }
+    .p-card.current::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--purple);
+    }
+
+    .p-rank {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .p-rank.r1 { color: var(--gold); }
+    .p-rank.r2 { color: #94a3b8; }
+    .p-rank.r3 { color: #cd7f32; }
+
+    .p-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .p-card.current .p-avatar {
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      box-shadow: 0 0 16px rgba(124,58,237,0.4);
+    }
+
+    .p-info { flex: 1; min-width: 0; }
+    .p-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .p-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .p-sub .mic-tag {
+      color: #a78bfa;
+      font-weight: 600;
+    }
+
+    .p-stars {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+    .p-stars-icon { font-size: 0.75rem; }
+
+    .p-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .btn-play {
+      padding: 8px 16px;
+      background: var(--purple);
+      color: #fff;
+      border-radius: 9px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .btn-play:hover { background: var(--purple-h); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124,58,237,0.35); }
+    .btn-play:active { transform: none; box-shadow: none; }
+    .btn-play:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-kick {
+      padding: 8px 10px;
+      background: rgba(239,68,68,0.08);
+      color: var(--muted2);
+      border-radius: 9px;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+    }
+    .btn-kick:hover { background: rgba(239,68,68,0.15); color: var(--red); border-color: rgba(239,68,68,0.3); }
+
+    /* ── Session panel (right) ───────────────────────────────────────────── */
+    .panel-side {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .side-block {
+      padding: 24px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .side-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .stat-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -1px; }
+    .stat-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .stat-card.gold .stat-value { color: var(--gold); }
+    .stat-card.purple .stat-value { color: #a78bfa; }
+
+    /* Current session info */
+    .session-empty {
+      padding: 20px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .session-active { display: none; }
+    .session-speaker-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 12px;
+    }
+
+    .mini-stars {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .mini-star {
+      font-size: 1.1rem;
+      transition: color 0.3s;
+    }
+    .mini-star.empty { color: var(--border); }
+    .mini-star.filled { color: var(--gold); }
+
+    .session-progress {
+      font-size: 0.8rem;
+      color: var(--muted2);
+    }
+    .session-progress strong { color: var(--gold); }
+
+    /* Side list */
+    .side-participants { overflow-y: auto; flex: 1; padding: 12px 0; }
+    .side-p-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 24px;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .side-p-row.current { background: rgba(124,58,237,0.1); }
+    .side-p-num { color: var(--muted); font-size: 0.72rem; width: 18px; text-align: center; }
+    .side-p-name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .side-p-stars { color: var(--gold); font-weight: 700; font-size: 0.8rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1e1e35;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Confirm overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      display: none;
+    }
+    .confirm-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 360px;
+      width: 90%;
+      text-align: center;
+    }
+    .confirm-icon { font-size: 2rem; margin-bottom: 14px; }
+    .confirm-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .confirm-text { color: var(--muted2); font-size: 0.875rem; line-height: 1.5; margin-bottom: 24px; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .btn-cancel {
+      padding: 10px 22px;
+      background: var(--surface2);
+      color: var(--muted2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .btn-cancel:hover { color: var(--text); }
+    .btn-confirm-reset {
+      padding: 10px 22px;
+      background: rgba(239,68,68,0.15);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .btn-confirm-reset:hover { background: rgba(239,68,68,0.28); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header>
+    <div>
+      <div class="logo">БА<em>ЛЫ</em></div>
+      <div class="logo-sub">Панель управления</div>
+    </div>
+    <div class="header-actions">
+      <div class="conn-badge">
+        <div class="conn-dot" id="conn-dot"></div>
+        <span id="conn-text">Подключение...</span>
+      </div>
+      <button class="btn btn-stop" id="btn-stop" onclick="doStop()" disabled>
+        ⏹ Остановить
+      </button>
+      <button class="btn btn-reset" onclick="openConfirm()">
+        ↺ Сбросить всё
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Main layout ─────────────────────────────────────────────────────── -->
+  <div class="layout">
+
+    <!-- Left: participants list -->
+    <div class="panel-main" id="participants-panel">
+      <div class="panel-title">Список участников</div>
+
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-text">
+          <strong>Участников пока нет</strong>
+          Попросите коллег перейти по ссылке и ввести своё имя.
+          Они появятся здесь автоматически.
+        </div>
+      </div>
+
+      <div id="p-list"></div>
+    </div>
+
+    <!-- Right: session info + stats -->
+    <div class="panel-side">
+
+      <!-- Stats -->
+      <div class="side-block">
+        <div class="side-label">Статистика</div>
+        <div class="stats-grid">
+          <div class="stat-card purple">
+            <div class="stat-value" id="stat-count">0</div>
+            <div class="stat-desc">Участников</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="stat-value" id="stat-votes">0</div>
+            <div class="stat-desc">Голосов сейчас</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current session -->
+      <div class="side-block">
+        <div class="side-label">Текущее выступление</div>
+
+        <div class="session-empty" id="session-empty">
+          Никто не выступает.<br>Нажмите ▶ рядом с участником.
+        </div>
+
+        <div class="session-active" id="session-active">
+          <div class="session-speaker-name" id="session-name"></div>
+          <div class="mini-stars" id="mini-stars"></div>
+          <div class="session-progress" id="session-progress"></div>
+        </div>
+      </div>
+
+      <!-- Mini participant list -->
+      <div class="side-label" style="padding:20px 24px 0">Рейтинг</div>
+      <div class="side-participants" id="side-list"></div>
+    </div>
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── Confirm dialog ─────────────────────────────────────────────────── -->
+  <div class="overlay" id="overlay" onclick="closeConfirmOutside(event)">
+    <div class="confirm-box">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-title">Сбросить всё?</div>
+      <div class="confirm-text">
+        Все участники и их баллы будут удалены.<br>
+        Активное голосование будет остановлено.<br>
+        Это действие нельзя отменить.
+      </div>
+      <div class="confirm-actions">
+        <button class="btn btn-cancel" onclick="closeConfirm()">Отмена</button>
+        <button class="btn btn-confirm-reset" onclick="doReset()">Сбросить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let st = { participants: [], session: null };
+
+    // ── Connection status ──────────────────────────────────────────────────
+    socket.on('connect', () => {
+      document.getElementById('conn-dot').classList.add('live');
+      document.getElementById('conn-text').textContent = 'Подключено';
+    });
+    socket.on('disconnect', () => {
+      document.getElementById('conn-dot').classList.remove('live');
+      document.getElementById('conn-text').textContent = 'Нет связи';
+    });
+
+    // ── Events ─────────────────────────────────────────────────────────────
+    socket.on('init', (data) => {
+      st = data;
+      render();
+    });
+
+    socket.on('participants_updated', (p) => {
+      st.participants = p;
+      renderList();
+      renderSide();
+    });
+
+    socket.on('session_start', ({ session, participants }) => {
+      st.session = session;
+      st.participants = participants;
+      render();
+      showToast(`▶ Выступает: ${session.speaker.name}`);
+    });
+
+    socket.on('session_end', ({ participants }) => {
+      st.session = null;
+      st.participants = participants;
+      render();
+    });
+
+    socket.on('vote_update', ({ session, participants }) => {
+      st.session = session;
+      st.participants = participants;
+      renderSessionPanel();
+      renderSide();
+      document.getElementById('stat-votes').textContent = session.voterCount;
+    });
+
+    socket.on('full_reset', () => {
+      st = { participants: [], session: null };
+      render();
+      showToast('Сессия сброшена');
+    });
+
+    // ── Full render ────────────────────────────────────────────────────────
+    function render() {
+      renderList();
+      renderSessionPanel();
+      renderSide();
+      document.getElementById('stat-count').textContent = st.participants.length;
+      document.getElementById('stat-votes').textContent = st.session ? st.session.voterCount : 0;
+      document.getElementById('btn-stop').disabled = !st.session;
+    }
+
+    // ── Participant list ───────────────────────────────────────────────────
+    function renderList() {
+      const container = document.getElementById('p-list');
+      const emptyState = document.getElementById('empty-state');
+      document.getElementById('stat-count').textContent = st.participants.length;
+
+      if (st.participants.length === 0) {
+        emptyState.style.display = 'block';
+        container.innerHTML = '';
+        return;
+      }
+      emptyState.style.display = 'none';
+
+      const speakerId = st.session?.speaker?.id ?? null;
+      const isSpeaking = !!st.session;
+
+      container.innerHTML = '';
+      st.participants.forEach((p, i) => {
+        const isCurrent = p.id === speakerId;
+        const card = document.createElement('div');
+        card.className = 'p-card' + (isCurrent ? ' current' : '');
+
+        let rankClass = 'p-rank';
+        if (i === 0) rankClass += ' r1';
+        else if (i === 1) rankClass += ' r2';
+        else if (i === 2) rankClass += ' r3';
+
+        const initial = p.name.charAt(0).toUpperCase();
+        card.innerHTML = `
+          <div class="${rankClass}">${i + 1}</div>
+          <div class="p-avatar">${escHtml(initial)}</div>
+          <div class="p-info">
+            <div class="p-name">${escHtml(p.name)}</div>
+            <div class="p-sub">${isCurrent ? '<span class="mic-tag">🎤 Выступает</span>' : ''}</div>
+          </div>
+          <div class="p-stars">
+            <span class="p-stars-icon">★</span>${p.totalStars}
+          </div>
+          <div class="p-actions">
+            <button class="btn btn-play" onclick="doPlay('${p.id}')"
+              ${isCurrent ? 'disabled' : ''}>
+              ▶ Старт
+            </button>
+            <button class="btn btn-kick" title="Удалить участника"
+              onclick="doKick('${p.id}', '${escAttr(p.name)}')">✕</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ── Session panel ──────────────────────────────────────────────────────
+    function renderSessionPanel() {
+      const emptyEl  = document.getElementById('session-empty');
+      const activeEl = document.getElementById('session-active');
+      document.getElementById('btn-stop').disabled = !st.session;
+
+      if (!st.session || !st.session.speaker) {
+        emptyEl.style.display  = 'block';
+        activeEl.style.display = 'none';
+        return;
+      }
+      emptyEl.style.display  = 'none';
+      activeEl.style.display = 'block';
+
+      document.getElementById('session-name').textContent = st.session.speaker.name;
+
+      const { stars, voterCount, totalVoters } = st.session;
+      const miniStars = document.getElementById('mini-stars');
+      miniStars.innerHTML = '';
+      for (let i = 0; i < totalVoters; i++) {
+        const s = document.createElement('span');
+        s.className = 'mini-star ' + (i < stars ? 'filled' : 'empty');
+        s.textContent = '★';
+        miniStars.appendChild(s);
+      }
+
+      document.getElementById('session-progress').innerHTML =
+        `Проголосовали: <strong>${voterCount}</strong> / ${totalVoters}`;
+    }
+
+    // ── Side list ──────────────────────────────────────────────────────────
+    function renderSide() {
+      const list = document.getElementById('side-list');
+      const speakerId = st.session?.speaker?.id ?? null;
+      list.innerHTML = '';
+      st.participants.forEach((p, i) => {
+        const row = document.createElement('div');
+        row.className = 'side-p-row' + (p.id === speakerId ? ' current' : '');
+        row.innerHTML = `
+          <div class="side-p-num">${i + 1}</div>
+          <div class="side-p-name">${escHtml(p.name)}</div>
+          <div class="side-p-stars">★ ${p.totalStars}</div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    // ── Actions ────────────────────────────────────────────────────────────
+    function doPlay(participantId) {
+      socket.emit('play', { participantId });
+    }
+
+    function doStop() {
+      socket.emit('stop');
+    }
+
+    function doKick(participantId, name) {
+      if (confirm(`Удалить участника "${name}"?`)) {
+        socket.emit('kick', { participantId });
+      }
+    }
+
+    function doReset() {
+      socket.emit('reset_all');
+      closeConfirm();
+    }
+
+    // ── Confirm dialog ─────────────────────────────────────────────────────
+    function openConfirm() {
+      document.getElementById('overlay').style.display = 'flex';
+    }
+    function closeConfirm() {
+      document.getElementById('overlay').style.display = 'none';
+    }
+    function closeConfirmOutside(e) {
+      if (e.target === document.getElementById('overlay')) closeConfirm();
+    }
+
+    // ── Toast ──────────────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── Utils ──────────────────────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function escAttr(s) {
+      return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

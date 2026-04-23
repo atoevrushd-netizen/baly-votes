@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Балы</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a12;
+      --surface:  #12121f;
+      --surface2: #1a1a2e;
+      --border:   #22223a;
+      --purple:   #7c3aed;
+      --purple-l: #a78bfa;
+      --gold:     #f59e0b;
+      --red:      #ef4444;
+      --green:    #22c55e;
+      --text:     #f0f0fa;
+      --sub:      #8888b8;
+      --muted:    #44446a;
+    }
+
+    html, body {
+      height: 100%; min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Screen system ───────────────────────────────────────────────────── */
+    .screen {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      animation: fadeIn .3s ease;
+    }
+    .screen[hidden] { display: none !important; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+    /* ── Typography ──────────────────────────────────────────────────────── */
+    .logo {
+      font-size: 3.6rem;
+      font-weight: 900;
+      letter-spacing: -3px;
+      line-height: 1;
+    }
+    .logo em { color: var(--purple); font-style: normal; }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+    .sub {
+      color: var(--sub);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      width: 100%;
+      padding: 17px 20px;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s cubic-bezier(.34,1.56,.64,1);
+      letter-spacing: -.2px;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+    .btn-primary {
+      background: var(--purple);
+      color: #fff;
+    }
+    .btn-primary:not(:disabled):hover  { background: #6d28d9; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(124,58,237,.4); }
+    .btn-primary:not(:disabled):active { transform: translateY(0); box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--sub);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:not(:disabled):hover { color: var(--text); border-color: var(--sub); }
+
+    .btn-text {
+      background: none; border: none;
+      color: var(--sub);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 10px 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      width: auto;
+    }
+    .btn-text:hover { color: var(--text); }
+
+    /* ── Input ───────────────────────────────────────────────────────────── */
+    .input-wrap { width: 100%; margin-bottom: 12px; }
+    input[type=text] {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      padding: 16px 18px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input[type=text]:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,58,237,.15);
+    }
+    input[type=text]::placeholder { color: var(--muted); }
+
+    /* ── My badge ────────────────────────────────────────────────────────── */
+    .my-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      color: var(--sub);
+      margin-bottom: 40px;
+    }
+    .my-badge strong { color: var(--text); font-weight: 600; }
+    .online-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--green);
+      flex-shrink: 0;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 22px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    /* ── Waiting animation ───────────────────────────────────────────────── */
+    .dots { display: flex; justify-content: center; gap: 8px; margin: 20px 0 0; }
+    .dot {
+      width: 8px; height: 8px;
+      background: var(--purple);
+      border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: .18s; }
+    .dot:nth-child(3) { animation-delay: .36s; }
+    @keyframes pulse {
+      0%, 80%, 100% { transform: scale(.6); opacity: .25; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Speaker label ───────────────────────────────────────────────────── */
+    .now-label {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--purple-l);
+      margin-bottom: 10px;
+    }
+    .speaker-name {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+
+    /* ── Vote buttons ────────────────────────────────────────────────────── */
+    .vote-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      margin-top: 24px;
+    }
+    .vote-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 28px 12px 22px;
+      border: 2px solid transparent;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all .2s cubic-bezier(.34,1.56,.64,1);
+      font-family: 'Inter', sans-serif;
+    }
+    .vote-icon { font-size: 2.8rem; line-height: 1; }
+    .vote-text { font-size: .82rem; font-weight: 700; }
+
+    .vote-star {
+      background: rgba(245,158,11,.07);
+      border-color: rgba(245,158,11,.2);
+      color: var(--gold);
+    }
+    .vote-star:hover {
+      background: rgba(245,158,11,.16);
+      border-color: var(--gold);
+      transform: scale(1.04);
+      box-shadow: 0 10px 28px rgba(245,158,11,.25);
+    }
+    .vote-star:active { transform: scale(.97); }
+
+    .vote-cross {
+      background: rgba(239,68,68,.07);
+      border-color: rgba(239,68,68,.2);
+      color: var(--red);
+    }
+    .vote-cross:hover {
+      background: rgba(239,68,68,.16);
+      border-color: var(--red);
+      transform: scale(1.04);
+      box-shadow: 0 10px 28px rgba(239,68,68,.2);
+    }
+    .vote-cross:active { transform: scale(.97); }
+
+    /* ── Voted states ────────────────────────────────────────────────────── */
+    .voted-icon {
+      font-size: 3.5rem;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+    .voted-icon.star { color: var(--gold); filter: drop-shadow(0 0 12px rgba(245,158,11,.5)); }
+    .voted-icon.cross { color: var(--sub); }
+
+    /* ── Is speaker state ────────────────────────────────────────────────── */
+    .mic-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    /* ── Back button ─────────────────────────────────────────────────────── */
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--sub);
+      font-family: 'Inter', sans-serif;
+      font-size: .9rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 32px;
+      align-self: flex-start;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    .wrap { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ LANDING ═══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="s-landing">
+    <div class="wrap" style="text-align:center;gap:0">
+      <div class="logo" style="margin-bottom:14px">БА<em>ЛЫ</em></div>
+      <div class="sub" style="margin-bottom:48px">Пятничные встречи</div>
+      <button class="btn btn-primary" onclick="showRegister()" style="margin-bottom:12px">
+        Войти как участник
+      </button>
+      <a href="/screen.html" target="_blank" class="btn btn-ghost" style="display:block;text-decoration:none;text-align:center">
+        Открыть экран / управление
+      </a>
+    </div>
+  </div>
+
+  <!-- ══ REGISTER ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="s-register" hidden>
+    <div class="wrap">
+      <button class="back-btn" onclick="showLanding()">← Назад</button>
+      <h2 style="margin-bottom:6px;align-self:flex-start">Ваше имя</h2>
+      <div class="sub" style="align-self:flex-start;margin-bottom:24px">Только имя — больше ничего не нужно</div>
+      <div class="input-wrap">
+        <input type="text" id="name-input" placeholder="Например: Алина"
+               maxlength="40" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+      </div>
+      <button class="btn btn-primary" id="join-btn" onclick="doJoin()">Войти</button>
+    </div>
+  </div>
+
+  <!-- ══ JOINED ════════════════════════════════════════════════════════════ -->
+  <div class="screen" id="s-joined" hidden>
+    <div class="wrap" style="text-align:center">
+
+      <!-- My name badge -->
+      <div class="my-badge">
+        <div class="online-dot"></div>
+        <span>Вы: <strong id="my-name-label">—</strong></span>
+      </div>
+
+      <!-- IDLE: no session -->
+      <div class="card" id="state-idle">
+        <div class="sub" style="margin-bottom:16px">Ожидайте начала встречи</div>
+        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+
+      <!-- PRESENTING: someone selected, voting not open -->
+      <div class="card" id="state-presenting" hidden>
+        <div class="now-label">Выступает</div>
+        <div class="speaker-name" id="pres-name">—</div>
+        <div class="sub">Ожидайте начала голосования...</div>
+        <div class="dots" style="margin-top:20px"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+
+      <!-- VOTING: not yet voted -->
+      <div id="state-voting" hidden>
+        <div class="card" style="margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none;padding-bottom:20px">
+          <div class="now-label">Выступает</div>
+          <div class="speaker-name" id="vote-name">—</div>
+          <div class="sub">Оцените выступление</div>
+        </div>
+        <div class="vote-grid">
+          <button class="vote-btn vote-star" onclick="doVote('star')">
+            <span class="vote-icon">★</span>
+            <span class="vote-text">Поддержать</span>
+          </button>
+          <button class="vote-btn vote-cross" onclick="doVote('cross')">
+            <span class="vote-icon">✕</span>
+            <span class="vote-text">Воздержаться</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- VOTED (cancelable) -->
+      <div class="card" id="state-voted" hidden>
+        <div class="voted-icon" id="voted-icon">★</div>
+        <h2 id="voted-title">Голос принят</h2>
+        <div class="sub" id="voted-sub" style="margin-bottom:20px">Вы поддержали идею</div>
+        <button class="btn-text" onclick="doCancel()" id="cancel-btn">Отменить голос</button>
+      </div>
+
+      <!-- VOTED LOCKED (final) -->
+      <div class="card" id="state-locked" hidden style="border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.05)">
+        <div class="voted-icon" id="locked-icon">★</div>
+        <h2>Выбор окончателен</h2>
+        <div class="sub" style="margin-top:6px">Спасибо за участие!</div>
+      </div>
+
+      <!-- IS SPEAKER -->
+      <div class="card" id="state-speaker" hidden style="border-color:rgba(124,58,237,.3)">
+        <div class="mic-icon">🎤</div>
+        <h2 style="margin-bottom:8px">Сейчас выступаете вы</h2>
+        <div class="sub">Коллеги слушают вашу идею</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    let me = null;
+    let myVote = null;         // { type, locked } | null
+    let currentSession = null;
+    let prevSpeakerId = null;
+
+    // ── Reconnect from sessionStorage ──────────────────────────────────────
+    const stored = (() => {
+      try { return JSON.parse(sessionStorage.getItem('baly_me')); } catch { return null; }
+    })();
+
+    socket.on('connect', () => {
+      if (me) { socket.emit('join', { id: me.id, name: null }); return; }
+      if (stored) { socket.emit('join', { id: stored.id, name: null }); }
+    });
+
+    // ── Full state broadcast ────────────────────────────────────────────────
+    socket.on('state', ({ session }) => {
+      // Detect speaker change → reset vote
+      const spId = session?.speaker?.id ?? null;
+      if (spId !== prevSpeakerId) {
+        myVote = null;
+        prevSpeakerId = spId;
+      }
+      currentSession = session;
+      if (me) renderJoined();
+    });
+
+    // ── Personal events ─────────────────────────────────────────────────────
+    socket.on('joined', ({ participant, voteStatus, isSpeaker }) => {
+      me = participant;
+      myVote = voteStatus;
+      sessionStorage.setItem('baly_me', JSON.stringify(participant));
+      showScreen('s-joined');
+      document.getElementById('my-name-label').textContent = me.name;
+      renderJoined();
+    });
+
+    socket.on('join_failed', () => {
+      sessionStorage.removeItem('baly_me');
+      me = null;
+      showScreen('s-register');
+    });
+
+    socket.on('vote_ok', ({ type, locked }) => {
+      myVote = { type, locked };
+      renderJoined();
+    });
+
+    socket.on('vote_cancelled', () => {
+      myVote = null;
+      renderJoined();
+    });
+
+    socket.on('full_reset', () => {
+      me = null; myVote = null; currentSession = null; prevSpeakerId = null;
+      sessionStorage.removeItem('baly_me');
+      showScreen('s-landing');
+    });
+
+    // ── Render joined screen ────────────────────────────────────────────────
+    function renderJoined() {
+      const s = currentSession;
+      const isSpeaker = me && s?.speaker?.id === me.id;
+
+      hide('state-idle');
+      hide('state-presenting');
+      hide('state-voting');
+      hide('state-voted');
+      hide('state-locked');
+      hide('state-speaker');
+
+      if (!s) {
+        show('state-idle');
+        return;
+      }
+
+      if (isSpeaker) {
+        show('state-speaker');
+        return;
+      }
+
+      if (s.phase === 'presenting') {
+        document.getElementById('pres-name').textContent = s.speaker.name;
+        show('state-presenting');
+        return;
+      }
+
+      // phase === 'voting'
+      if (!myVote) {
+        document.getElementById('vote-name').textContent = s.speaker.name;
+        show('state-voting');
+        return;
+      }
+
+      if (myVote.locked) {
+        const icon = document.getElementById('locked-icon');
+        icon.textContent = myVote.type === 'star' ? '★' : '✕';
+        icon.className = 'voted-icon ' + (myVote.type === 'star' ? 'star' : 'cross');
+        show('state-locked');
+      } else {
+        const icon  = document.getElementById('voted-icon');
+        const title = document.getElementById('voted-title');
+        const sub   = document.getElementById('voted-sub');
+        icon.textContent = myVote.type === 'star' ? '★' : '✕';
+        icon.className   = 'voted-icon ' + (myVote.type === 'star' ? 'star' : 'cross');
+        title.textContent = myVote.type === 'star' ? 'Голос принят' : 'Вы воздержались';
+        sub.textContent   = myVote.type === 'star' ? 'Вы поддержали идею' : 'Вы не поддержали идею';
+        show('state-voted');
+      }
+    }
+
+    // ── Actions ─────────────────────────────────────────────────────────────
+    function doJoin() {
+      const name = document.getElementById('name-input').value.trim();
+      if (!name) return;
+      document.getElementById('join-btn').disabled = true;
+      socket.emit('join', { id: null, name });
+    }
+
+    function doVote(type) { socket.emit('vote', { type }); }
+    function doCancel()   { socket.emit('cancel_vote'); }
+
+    // ── Screen navigation ───────────────────────────────────────────────────
+    function showLanding()  { showScreen('s-landing'); }
+    function showRegister() {
+      showScreen('s-register');
+      setTimeout(() => document.getElementById('name-input').focus(), 50);
+    }
+
+    function showScreen(id) {
+      ['s-landing','s-register','s-joined'].forEach(s => {
+        document.getElementById(s).hidden = s !== id;
+      });
+    }
+
+    function show(id) { document.getElementById(id).hidden = false; }
+    function hide(id) { document.getElementById(id).hidden = true; }
+
+    // ── Keyboard ─────────────────────────────────────────────────────────────
+    document.getElementById('name-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doJoin();
+    });
+  </script>
+</body>
+</html>
