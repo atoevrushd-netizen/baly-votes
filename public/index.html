@@ -275,6 +275,89 @@
     .back-btn:hover { color: var(--text); }
 
     .wrap { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; }
+
+    /* ── Winner overlay (mobile) ─────────────────────────────────────────── */
+    #winner-overlay-mobile {
+      display: none;
+      position: fixed; inset: 0;
+      background: #050510;
+      z-index: 300;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 32px 24px;
+      overflow: hidden;
+    }
+    #winner-overlay-mobile.open { display: flex; }
+
+    #confetti-canvas-mobile {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+
+    .mob-winner-content { position: relative; z-index: 1; width: 100%; }
+
+    .mob-trophy {
+      font-size: 4.5rem; line-height: 1;
+      display: block; margin-bottom: 16px;
+      animation: trophyBounce .7s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    @keyframes trophyBounce {
+      from { transform: scale(0) rotate(-20deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0); opacity: 1; }
+    }
+
+    .mob-winner-label {
+      font-size: .72rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 4px;
+      color: var(--gold); margin-bottom: 12px;
+      opacity: 0; animation: fadeUp .5s ease .3s forwards;
+    }
+
+    .mob-winner-name {
+      font-size: clamp(2.4rem, 12vw, 3.8rem);
+      font-weight: 900; letter-spacing: -2px; line-height: 1.1;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b, #fde68a, #f59e0b);
+      background-size: 300% 300%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      opacity: 0;
+      animation: fadeUp .5s ease .5s forwards, shimmer 2.5s ease-in-out .5s infinite;
+    }
+    @keyframes shimmer {
+      0%,100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .mob-winner-you {
+      margin-top: 18px;
+      font-size: 1rem; font-weight: 700;
+      color: var(--purple-l);
+      opacity: 0; animation: fadeUp .5s ease .75s forwards;
+    }
+
+    .mob-winner-stars {
+      margin-top: 14px;
+      font-size: 1.5rem; color: var(--gold);
+      letter-spacing: 4px;
+      opacity: 0; animation: fadeUp .5s ease .9s forwards;
+    }
+
+    .mob-winner-close {
+      position: absolute; top: 20px; right: 20px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--sub); border-radius: 10px;
+      padding: 8px 14px;
+      font-family: 'Inter', sans-serif; font-size: .8rem; font-weight: 600;
+      cursor: pointer; transition: all .2s;
+    }
+    .mob-winner-close:hover { color: var(--text); }
   </style>
 </head>
 <body>
@@ -387,9 +470,22 @@
     </div>
   </div>
 
+  <!-- ══ WINNER OVERLAY ═══════════════════════════════════════════════════ -->
+  <div id="winner-overlay-mobile">
+    <canvas id="confetti-canvas-mobile"></canvas>
+    <button class="mob-winner-close" onclick="closeMobWinner()">✕ Закрыть</button>
+    <div class="mob-winner-content">
+      <span class="mob-trophy">🏆</span>
+      <div class="mob-winner-label" id="mob-winner-label">Победитель</div>
+      <div class="mob-winner-name" id="mob-winner-name">—</div>
+      <div class="mob-winner-you" id="mob-winner-you" hidden>Это вы! 🎉</div>
+      <div class="mob-winner-stars" id="mob-winner-stars"></div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    const socket = io({ reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
 
     let me = null;
     let myVote = null;
@@ -465,8 +561,79 @@
     socket.on('full_reset', () => {
       me = null; myVote = null; currentSession = null; prevSpeakerId = null;
       clearMe();
+      closeMobWinner();
       showScreen('s-landing');
     });
+
+    // ── Winner на телефоне ──────────────────────────────────────────────────
+    let mobConfettiAnim = null;
+
+    socket.on('show_winner', ({ winner }) => {
+      const overlay = document.getElementById('winner-overlay-mobile');
+      document.getElementById('mob-winner-name').textContent = winner.name;
+
+      const youEl = document.getElementById('mob-winner-you');
+      if (me && me.id === winner.id) {
+        document.getElementById('mob-winner-label').textContent = 'Вы победитель!';
+        youEl.hidden = false;
+      } else {
+        document.getElementById('mob-winner-label').textContent = 'Победитель';
+        youEl.hidden = true;
+      }
+
+      document.getElementById('mob-winner-stars').textContent =
+        winner.totalStars > 0 ? '★'.repeat(Math.min(winner.totalStars, 15)) : '';
+
+      overlay.classList.add('open');
+
+      // Перезапуск анимаций
+      overlay.querySelectorAll('.mob-trophy,.mob-winner-label,.mob-winner-name,.mob-winner-you,.mob-winner-stars')
+        .forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; });
+
+      startMobConfetti();
+    });
+
+    function closeMobWinner() {
+      document.getElementById('winner-overlay-mobile').classList.remove('open');
+      if (mobConfettiAnim) { cancelAnimationFrame(mobConfettiAnim); mobConfettiAnim = null; }
+    }
+
+    function startMobConfetti() {
+      if (mobConfettiAnim) cancelAnimationFrame(mobConfettiAnim);
+      const canvas = document.getElementById('confetti-canvas-mobile');
+      const ctx = canvas.getContext('2d');
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const COLORS = ['#f59e0b','#fbbf24','#fde68a','#7c3aed','#a78bfa','#ec4899','#22c55e','#fff'];
+      const particles = Array.from({ length: 100 }, () => mkP(canvas));
+
+      function mkP(c, top = false) {
+        return { x: Math.random()*c.width, y: top ? -10 : Math.random()*-c.height,
+          w: 5+Math.random()*8, h: 3+Math.random()*5,
+          color: COLORS[Math.floor(Math.random()*COLORS.length)],
+          rot: Math.random()*Math.PI*2, rotS: (Math.random()-.5)*.18,
+          vy: 2+Math.random()*3, vx: (Math.random()-.5)*2, op: .8+Math.random()*.2 };
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach((p, i) => {
+          p.y += p.vy; p.x += p.vx; p.rot += p.rotS;
+          if (p.y > canvas.height + 20) particles[i] = mkP(canvas, true);
+          ctx.save();
+          ctx.globalAlpha = p.op;
+          ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          if (i % 3 === 0) ctx.arc(0, 0, p.w/2, 0, Math.PI*2);
+          else ctx.rect(-p.w/2, -p.h/2, p.w, p.h);
+          ctx.fill(); ctx.restore();
+        });
+        mobConfettiAnim = requestAnimationFrame(draw);
+      }
+      draw();
+    }
 
     // ── Render joined screen ────────────────────────────────────────────────
     function renderJoined() {

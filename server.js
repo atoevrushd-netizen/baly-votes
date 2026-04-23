@@ -7,7 +7,11 @@ const os   = require('os');
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server);
+const io     = new Server(server, {
+  pingTimeout:  60000,   // ждать 60 сек перед разрывом
+  pingInterval: 25000,   // пинговать каждые 25 сек
+  transports: ['websocket', 'polling'], // fallback на polling если WS недоступен
+});
 
 // ─── State ────────────────────────────────────────────────────────────────────
 /** @type {{ id:string, name:string, totalStars:number }[]} */
@@ -203,6 +207,21 @@ io.on('connection', socket => {
     session = null;
     io.emit('full_reset');
   });
+
+  // ── admin: объявить победителя ────────────────────────────────────────────
+  socket.on('show_winner', () => {
+    if (participants.length === 0) return;
+    const winner = [...participants].sort((a, b) => b.totalStars - a.totalStars)[0];
+    io.emit('show_winner', { winner });
+  });
+});
+
+// ─── Стабильность: не падать на необработанных ошибках ───────────────────────
+process.on('uncaughtException', err => {
+  console.error('[uncaughtException]', err);
+});
+process.on('unhandledRejection', reason => {
+  console.error('[unhandledRejection]', reason);
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

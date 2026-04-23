@@ -586,7 +586,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    const socket = io({ reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
 
     let st = { participants: [], session: null };
 
@@ -772,31 +772,33 @@
     // ── Winner ────────────────────────────────────────────────────────────────
     let confettiAnim = null;
 
+    // Кнопка "Победитель" → отправляем на сервер, он рассылает всем
     function showWinner() {
-      const p = st.participants[0]; // уже отсортировано по звёздам
-      if (!p) return;
+      if (st.participants.length === 0) return;
+      socket.emit('show_winner');
+    }
 
-      document.getElementById('winner-name').textContent  = p.name;
-      const stars = p.totalStars;
+    // Получаем от сервера — показываем оверлей
+    socket.on('show_winner', ({ winner }) => {
+      document.getElementById('winner-name').textContent  = winner.name;
       document.getElementById('winner-stars').textContent =
-        stars > 0 ? '★'.repeat(Math.min(stars, 20)) : '';
+        winner.totalStars > 0 ? '★'.repeat(Math.min(winner.totalStars, 20)) : '';
 
       const overlay = document.getElementById('winner-overlay');
       overlay.classList.add('open');
 
-      // Restart name animation
-      const nameEl = overlay.querySelector('.winner-name');
-      const labelEl = overlay.querySelector('.winner-label');
-      const starsEl = overlay.querySelector('.winner-stars');
+      const nameEl   = overlay.querySelector('.winner-name');
+      const labelEl  = overlay.querySelector('.winner-label');
+      const starsEl  = overlay.querySelector('.winner-stars');
       const trophyEl = overlay.querySelector('.winner-trophy');
       [nameEl, labelEl, starsEl, trophyEl].forEach(el => {
         el.style.animation = 'none';
-        el.offsetHeight; // reflow
+        el.offsetHeight;
         el.style.animation = '';
       });
 
       startConfetti();
-    }
+    });
 
     function closeWinner() {
       document.getElementById('winner-overlay').classList.remove('open');
