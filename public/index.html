@@ -293,6 +293,15 @@
     </div>
   </div>
 
+  <!-- ══ AUTO-CONNECTING ══════════════════════════════════════════════════ -->
+  <div class="screen" id="s-connecting" hidden>
+    <div class="wrap" style="text-align:center">
+      <div class="logo" style="margin-bottom:14px">БА<em>ЛЫ</em></div>
+      <div class="sub" style="margin-bottom:32px">Входим как <strong id="connecting-name" style="color:var(--text)"></strong>...</div>
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+  </div>
+
   <!-- ══ REGISTER ══════════════════════════════════════════════════════════ -->
   <div class="screen" id="s-register" hidden>
     <div class="wrap">
@@ -315,6 +324,9 @@
       <div class="my-badge">
         <div class="online-dot"></div>
         <span>Вы: <strong id="my-name-label">—</strong></span>
+        <button onclick="doLogout()" title="Сменить имя"
+          style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:0 0 0 6px;line-height:1"
+          >✕</button>
       </div>
 
       <!-- IDLE: no session -->
@@ -380,23 +392,37 @@
     const socket = io();
 
     let me = null;
-    let myVote = null;         // { type, locked } | null
+    let myVote = null;
     let currentSession = null;
     let prevSpeakerId = null;
 
-    // ── Reconnect from sessionStorage ──────────────────────────────────────
-    const stored = (() => {
-      try { return JSON.parse(sessionStorage.getItem('baly_me')); } catch { return null; }
-    })();
+    // ── localStorage: сохраняем навсегда ───────────────────────────────────
+    function saveMe(p)  { try { localStorage.setItem('baly_me', JSON.stringify(p)); } catch {} }
+    function loadMe()   { try { return JSON.parse(localStorage.getItem('baly_me')); } catch { return null; } }
+    function clearMe()  { try { localStorage.removeItem('baly_me'); } catch {} }
 
+    const stored = loadMe();
+
+    // Показываем имя на экране автоподключения
+    if (stored?.name) {
+      const el = document.getElementById('connecting-name');
+      if (el) el.textContent = stored.name;
+    }
+
+    // ── Подключение: автовход если есть сохранённый пользователь ───────────
     socket.on('connect', () => {
-      if (me) { socket.emit('join', { id: me.id, name: null }); return; }
-      if (stored) { socket.emit('join', { id: stored.id, name: null }); }
+      if (me) {
+        socket.emit('join', { id: me.id, name: null });
+        return;
+      }
+      if (stored) {
+        showScreen('s-connecting');
+        socket.emit('join', { id: stored.id, name: null });
+      }
     });
 
     // ── Full state broadcast ────────────────────────────────────────────────
     socket.on('state', ({ session }) => {
-      // Detect speaker change → reset vote
       const spId = session?.speaker?.id ?? null;
       if (spId !== prevSpeakerId) {
         myVote = null;
@@ -410,16 +436,20 @@
     socket.on('joined', ({ participant, voteStatus, isSpeaker }) => {
       me = participant;
       myVote = voteStatus;
-      sessionStorage.setItem('baly_me', JSON.stringify(participant));
+      saveMe(participant);
       showScreen('s-joined');
       document.getElementById('my-name-label').textContent = me.name;
       renderJoined();
     });
 
     socket.on('join_failed', () => {
-      sessionStorage.removeItem('baly_me');
-      me = null;
-      showScreen('s-register');
+      // ID не найден (сервер перезапустился) — автоматически регистрируемся со старым именем
+      if (stored?.name) {
+        socket.emit('join', { id: null, name: stored.name });
+      } else {
+        clearMe();
+        showScreen('s-landing');
+      }
     });
 
     socket.on('vote_ok', ({ type, locked }) => {
@@ -434,7 +464,7 @@
 
     socket.on('full_reset', () => {
       me = null; myVote = null; currentSession = null; prevSpeakerId = null;
-      sessionStorage.removeItem('baly_me');
+      clearMe();
       showScreen('s-landing');
     });
 
@@ -501,6 +531,14 @@
     function doVote(type) { socket.emit('vote', { type }); }
     function doCancel()   { socket.emit('cancel_vote'); }
 
+    function doLogout() {
+      me = null; myVote = null; currentSession = null; prevSpeakerId = null;
+      clearMe();
+      document.getElementById('name-input').value = '';
+      document.getElementById('join-btn').disabled = false;
+      showScreen('s-landing');
+    }
+
     // ── Screen navigation ───────────────────────────────────────────────────
     function showLanding()  { showScreen('s-landing'); }
     function showRegister() {
@@ -509,8 +547,9 @@
     }
 
     function showScreen(id) {
-      ['s-landing','s-register','s-joined'].forEach(s => {
-        document.getElementById(s).hidden = s !== id;
+      ['s-landing','s-register','s-joined','s-connecting'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.hidden = s !== id;
       });
     }
 
